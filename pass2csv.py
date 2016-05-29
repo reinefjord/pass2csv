@@ -1,5 +1,4 @@
 import csv
-import getpass
 import os
 import sys
 import gnupg
@@ -40,4 +39,3 @@ def main(path):
 if __name__ == '__main__':
     path = os.path.abspath(sys.argv[1])
     main(path)
-
