@@ -13,12 +13,23 @@ def traverse(path):
 
 
 def parse(basepath, path, data):
-    name = os.path.splitext(os.path.basename(path))[0]
+    title = os.path.splitext(os.path.basename(path))[0]
     group = os.path.dirname(os.path.os.path.relpath(path, basepath))
     split_data = data.split('\n', maxsplit=1)
     password = split_data[0]
     notes = split_data[1]
-    return [group, name, password, notes]
+    username = ''
+    url = ''
+    note_lines = notes.split('\n')
+    notes = ''
+    for line in note_lines:
+        if line[:6]=='login:':
+            username = line[7:]
+        elif line[:4]=='url:':
+            url = line[5:]
+        else:
+            notes += line+'\n'
+    return [group, title, username, password, url, notes]
 
 
 def main(path):
@@ -30,7 +41,6 @@ def main(path):
             with open(file_path, 'rb') as f:
                 data = str(gpg.decrypt_file(f))
                 csv_data.append(parse(path, file_path, data))
-
     with open('pass.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerows(csv_data)
