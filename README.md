@@ -1,6 +1,11 @@
 # pass2csv
-Needs [python-gnupg](https://pypi.python.org/pypi/python-gnupg). Run with path
-to password store as argument.
+Needs [python-gnupg](https://pypi.python.org/pypi/python-gnupg) and python3.
+Run with path to password store as argument:
+
+```
+python3 -m pip install --user python-gnupg
+python3 pass2csv.py ~/.password-store
+```
 
 There are two ways to export CSV data:
 
