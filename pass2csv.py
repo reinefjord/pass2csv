@@ -9,12 +9,19 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# A list of possible fields (in order) that could be converted to login fields
-LOGIN_FIELDS=['login', 'user', 'username', 'email']
-# Set to True to extract url fields
-GET_URL=True
-# A regular expression list of lines that should be excluded from the notes field
-EXCLUDE_ROWS=['^---$', '^autotype ?: ?']
+# Set to True to allow for alternate password csv to be created
+# See README for differences
+KPX_FORMAT=True
+
+if KPX_FORMAT:
+    # A list of possible fields (in order) that could be converted to login fields
+    LOGIN_FIELDS=['login', 'user', 'username', 'email']
+    # Set to True to extract url fields
+    GET_URL=True
+    # A regular expression list of lines that should be excluded from the notes field
+    EXCLUDE_ROWS=['^---$', '^autotype ?: ?']
+
+logger.info("Using KPX format: %s", KPX_FORMAT)
 
 def traverse(path):
     for root, dirs, files in os.walk(path):
@@ -75,10 +82,16 @@ def parse(basepath, path, data):
     group = os.path.dirname(os.path.os.path.relpath(path, basepath))
     split_data = data.split('\n', maxsplit=1)
     password = split_data[0]
+    # Perform if/else in case there are no notes for a field
     notes = split_data[1] if len(split_data) > 1 else ""
-    user, url, notes = getMetadata(notes)
-    logger.info("Processed %s" % (name,))
-    return [group, name, user, password, url, notes]
+    logger.info("Processing %s" % (name,))
+    if KPX_FORMAT:
+        # We are using the advanced format; try extracting user and url
+        user, url, notes = getMetadata(notes)
+        return [group, name, user, password, url, notes]
+    else:
+        # We are not using KPX format; just use notes
+        return [group, name, password, notes]
 
 
 def main(path):
