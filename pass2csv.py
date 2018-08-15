@@ -23,12 +23,14 @@ def traverse(path):
         for name in files:
             yield os.path.join(root, name)
 
-def getMetadata(notes):
-    lines = notes.split('\n')
+def getMetadata(notes_raw):
+    lines = notes_raw.split('\n')
 
     # A list of lines to keep as notes (will be joined by newline)
-    ret = []
+    notes = []
+    # The extracted user field
     user = ''
+    # The extracted URL field
     url = ''
 
     # This will extract each field name (for example, if a line in notes was `user: user1`, fields should contain 'user')
@@ -64,9 +66,9 @@ def getMetadata(notes):
                 # The url was matched, don't add it to notes
                 continue
 
-        ret.append(line)
+        notes.append(line)
 
-    return (user, url, '\n'.join(ret).strip())
+    return (user, url, '\n'.join(notes).strip())
 
 def parse(basepath, path, data):
     name = os.path.splitext(os.path.basename(path))[0]
