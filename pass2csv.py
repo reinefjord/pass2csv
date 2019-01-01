@@ -133,10 +133,10 @@ class OptionsParser(ArgumentParser):
         super().__init__(*args, **kwargs)
 
         self.add_argument(
-            '-p', '--path',
+            'pass_path',
+            metavar='path',
             type=str,
             help="Path to the PasswordStore folder to use",
-            dest='pass_path',
         )
 
         self.add_argument(
