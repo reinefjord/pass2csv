@@ -88,7 +88,6 @@ class CSVExporter():
         return (user, url, '\n'.join(notes).strip())
 
     def parse(self, basepath, path, data):
-
         name = os.path.splitext(os.path.basename(path))[0]
         group = os.path.dirname(os.path.os.path.relpath(path, basepath))
         split_data = data.split('\n', maxsplit=1)
@@ -116,7 +115,7 @@ def main(kpx_format, gpgbinary, use_agent, pass_path):
         if os.path.splitext(file_path)[1] == '.gpg':
             with open(file_path, 'rb') as f:
                 data = str(gpg.decrypt_file(f))
-                if str == "":
+                if len(data) == 0:
                     raise ValueError("The password file is empty")
                 csv_data.append(exporter.parse(pass_path, file_path, data))
 
