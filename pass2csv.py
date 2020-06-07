@@ -9,9 +9,7 @@ import gnupg
 
 
 class CSVExporter():
-
     def __init__(self, kpx_format):
-
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
@@ -30,15 +28,13 @@ class CSVExporter():
         self.logger.info("Using KPX format: %s", self.kpx_format)
 
     def traverse(self, path):
-
         for root, dirs, files in os.walk(path):
             if '.git' in dirs:
                 dirs.remove('.git')
             for name in files:
                 yield os.path.join(root, name)
 
-    def getMetadata(self, notes_raw):
-
+    def get_metadata(self, notes_raw):
         lines = notes_raw.split('\n')
 
         # A list of lines to keep as notes (will be joined by newline)
@@ -48,7 +44,8 @@ class CSVExporter():
         # The extracted URL field
         url = ''
 
-        # This will extract each field name (for example, if a line in notes was `user: user1`, fields should contain 'user')
+        # This will extract each field name (for example, if a line in notes
+        # was `user: user1`, fields should contain 'user')
         all_fields = set()
         for line in lines:
             field_search = re.search('^(.*) ?: ?.*$', line, re.I)
@@ -57,13 +54,14 @@ class CSVExporter():
 
         # Check if any of the fields match the login names
         login_fields = [
-            field for field in self.login_fields if field in all_fields]
-        # Get the field to use for the login. Since self.login_fields is in order, the 0th element will contain the first match
+            field for field in self.login_fields if field in all_fields
+        ]
+        # Get the field to use for the login. Since self.login_fields is in order,
+        # the 0th element will contain the first match
         login_field = None if not login_fields else login_fields[0]
 
         # Iterate through the file again to build the return array
         for line in lines:
-
             # If any of the exclusion patterns match, ignore the line
             if [pattern for pattern in self.exclude_rows if re.search(pattern, line, re.I)]:
                 continue
@@ -97,7 +95,7 @@ class CSVExporter():
         self.logger.info("Processing %s", name)
         if self.kpx_format:
             # We are using the advanced format; try extracting user and url
-            user, url, notes = self.getMetadata(notes)
+            user, url, notes = self.get_metadata(notes)
             return [group, name, user, password, url, notes]
         else:
             # We are not using KPX format; just use notes
@@ -105,8 +103,6 @@ class CSVExporter():
 
 
 def main(kpx_format, gpgbinary, use_agent, pass_path):
-    """Main script entrypoint."""
-
     exporter = CSVExporter(kpx_format)
     gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
     gpg.encoding = 'utf-8'
@@ -125,10 +121,7 @@ def main(kpx_format, gpgbinary, use_agent, pass_path):
 
 
 class OptionsParser(ArgumentParser):
-    """Regular ArgumentParser with the script's options."""
-
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.add_argument(
