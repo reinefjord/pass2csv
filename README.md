@@ -86,6 +86,7 @@ There are two ways to export CSV data:
   were used in another field.
 - `---` Was not included in the notes field because it was matched by `-e`.
 
+
 ### Example KeePass Generic CSV Importer
 - Cmd line
 
@@ -95,3 +96,41 @@ There are two ways to export CSV data:
 - Output CSV row (formatted)
 
         sites, example, password123, "---\nusername: user_name\nemail: user@example.com\nurl: example.com\nsome_note"
+
+
+## Development
+Create a virtual environment:
+
+```sh
+python3 -m venv venv
+```
+
+Activate the environment:
+
+```sh
+. venv/bin/activate
+```
+
+Now you may either use `pip` directly to install the dependencies, or
+you can install `pip-tools`. The latter is recommended.
+
+### pip
+
+```sh
+pip install -r requirements.txt
+```
+
+
+### pip-tools
+[pip-tools](https://github.com/jazzband/pip-tools) can keep your virtual
+environment in sync with the `requirements.txt` file, as well as compiling a
+new `requirements.txt` when adding/removing a dependency in `requirements.in`.
+
+It is recommended that pip-tools is installed within the virutal
+environment.
+
+```sh
+pip install pip-tools
+pip-compile  # only necessary when adding/removing a dependency
+pip-sync
+```
