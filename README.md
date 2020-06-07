@@ -29,7 +29,8 @@ optional arguments:
                         strings to interpret as names of login fields (only used with -x)
   -u, --get-url         match row starting with 'url:' and extract it (only used with -x)
   -e EXCLUDE_ROWS [EXCLUDE_ROWS ...], --exclude-rows EXCLUDE_ROWS [EXCLUDE_ROWS ...]
-                        regexp strings to exclude from the notes field (only used with -x)
+                        regexps to exclude from the notes field (only used with -x)
+
 ```
 
 

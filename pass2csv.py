@@ -7,11 +7,13 @@ from argparse import ArgumentParser
 
 import gnupg
 
+logger = logging.getLogger(__name__)
+
 
 class CSVExporter():
     def __init__(self, kpx_format, login_fields, get_url, exclude_rows):
         logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
 
         # Set to True to allow for alternate password csv to be created
         # See README for differences
@@ -115,7 +117,7 @@ def main(gpgbinary, use_agent, pass_path,
             with open(file_path, 'rb') as f:
                 data = str(gpg.decrypt_file(f))
                 if len(data) == 0:
-                    raise ValueError("The password file is empty")
+                    logger.warning("Could not decrypt %s or it is empty.", file_path)
                 csv_data.append(exporter.parse(pass_path, file_path, data))
 
     with open('pass.csv', 'w', newline='') as csv_file:
