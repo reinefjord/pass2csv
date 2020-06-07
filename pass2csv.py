@@ -9,7 +9,7 @@ import gnupg
 
 
 class CSVExporter():
-    def __init__(self, kpx_format):
+    def __init__(self, kpx_format, login_fields, get_url, exclude_rows):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
@@ -18,12 +18,14 @@ class CSVExporter():
         self.kpx_format = kpx_format
 
         if self.kpx_format:
-            # A list of possible fields (in order) that could be converted to login fields
-            self.login_fields = ['login', 'user', 'username', 'email']
+            # A list of possible fields (in order) that could be converted to
+            # login fields
+            self.login_fields = login_fields or []
             # Set to True to extract url fields
-            self.get_url = True
-            # A regular expression list of lines that should be excluded from the notes field
-            self.exclude_rows = ['^---$', '^autotype ?: ?']
+            self.get_url = get_url
+            # A regular expression list of lines that should be excluded from
+            # the notes field
+            self.exclude_rows = exclude_rows or []
 
         self.logger.info("Using KPX format: %s", self.kpx_format)
 
@@ -102,8 +104,9 @@ class CSVExporter():
             return [group, name, password, notes]
 
 
-def main(kpx_format, gpgbinary, use_agent, pass_path):
-    exporter = CSVExporter(kpx_format)
+def main(gpgbinary, use_agent, pass_path,
+         kpx_format, login_fields, get_url, exclude_rows):
+    exporter = CSVExporter(kpx_format, login_fields, get_url, exclude_rows)
     gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
     gpg.encoding = 'utf-8'
     csv_data = []
@@ -128,20 +131,20 @@ class OptionsParser(ArgumentParser):
             'pass_path',
             metavar='path',
             type=str,
-            help="Path to the PasswordStore folder to use",
+            help="path to the password-store folder to export",
         )
 
         self.add_argument(
             '-a', '--agent',
             action='store_true',
-            help="Use this option to ask gpg to use it's auth agent",
+            help="ask gpg to use its auth agent",
             dest='use_agent',
         )
 
         self.add_argument(
             '-b', '--gpgbinary',
             type=str,
-            help="Path to the gpg binary you wish to use",
+            help="path to the gpg binary you wish to use",
             dest='gpgbinary',
             default="gpg"
         )
@@ -149,8 +152,30 @@ class OptionsParser(ArgumentParser):
         self.add_argument(
             '-x', '--kpx',
             action='store_true',
-            help="Use this option to format the CSV for KeePassXC",
+            help="format the CSV for KeePassXC",
             dest='kpx_format',
+        )
+
+        self.add_argument(
+            '-l', '--login-fields',
+            action='extend',
+            nargs='+',
+            type=str,
+            help="strings to interpret as names of login fields (only used with -x)"
+        )
+
+        self.add_argument(
+            '-u', '--get-url',
+            action='store_true',
+            help="match row starting with 'url:' and extract it (only used with -x)"
+        )
+
+        self.add_argument(
+            '-e', '--exclude-rows',
+            action='extend',
+            nargs='+',
+            type=str,
+            help="regexps to exclude from the notes field (only used with -x)"
         )
 
 

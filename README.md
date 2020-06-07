@@ -1,5 +1,5 @@
 # pass2csv
-Needs [python-gnupg](https://pypi.python.org/pypi/python-gnupg) and python3.
+Requires [python-gnupg](https://pypi.python.org/pypi/python-gnupg) and python3.
 Run with path to password store as argument:
 
 ```
@@ -7,40 +7,65 @@ python3 -m pip install --user python-gnupg
 python3 pass2csv.py ~/.password-store
 ```
 
+
+## Usage
+
+```
+$ pass2csv --help
+usage: pass2csv.py [-h] [-a] [-b GPGBINARY] [-x] [-l LOGIN_FIELDS [LOGIN_FIELDS ...]] [-u]
+                   [-e EXCLUDE_ROWS [EXCLUDE_ROWS ...]]
+                   path
+
+positional arguments:
+  path                  path to the password-store folder to export
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a, --agent           ask gpg to use its auth agent
+  -b GPGBINARY, --gpgbinary GPGBINARY
+                        path to the gpg binary you wish to use
+  -x, --kpx             format the CSV for KeePassXC
+  -l LOGIN_FIELDS [LOGIN_FIELDS ...], --login-fields LOGIN_FIELDS [LOGIN_FIELDS ...]
+                        strings to interpret as names of login fields (only used with -x)
+  -u, --get-url         match row starting with 'url:' and extract it (only used with -x)
+  -e EXCLUDE_ROWS [EXCLUDE_ROWS ...], --exclude-rows EXCLUDE_ROWS [EXCLUDE_ROWS ...]
+                        regexp strings to exclude from the notes field (only used with -x)
+```
+
+
+## Export format
 There are two ways to export CSV data:
 
 1.  The format for the KeePass Generic CSV Importer:
 
         Group(/),Title,Password,Notes
 
-    Where 'Password' is the first line of the entry in `pass` and 'Notes' are all
-    subsequent lines. '\\' should not be interpreted as an escape character.
+    Where 'Password' is the first line of the entry in `pass` and
+    'Notes' are all subsequent lines. '\\' should not be interpreted as
+    an escape character.
 
-    To enable, set `KPX_FORMAT=False` in `pass2csv.py`
+    This is the default mode.
 
 2.  The format for the KeePassXC Importer:
 
         Group(/),Title,Login,Password,URL,Notes
 
-    Where 'Password' is the first line of the entry in `pass`, 'User' is configured
-    with `LOGIN_FIELDS`, URL is extracted if `GET_URL` is set, and 'Notes' contains
-    any other fields that do not match `EXCLUDE_ROWS`.
+    Where 'Password' is the first line of the entry in `pass`, 'User' is
+    configured with `-l`, URL is extracted if `-u` is
+    set, and 'Notes' contains any other fields that do not match
+    `-e`.
 
-    To enable, set `KPX_FORMAT=True` and configure the variables mentioned above in
-    `pass2csv.py`.
+    'User' field is chosen by searching for the first field with a name
+    set by `-l`. Once the field is found, the login is set and the field
+    is removed from notes.
 
-    'User' field is chosen by searching for the first field with a name in
-    LOGIN_FIELDS. Once the field is found, the login is set and the field is
-    removed from notes.
+    Use `-x` or `--kpx` to enable this mode.
+
 
 ### Example KeePassXC Import
-- Variable definitions (`pass2csv.py`)
+- Cmd line
 
-        KPX_FORMAT=True
-
-        LOGIN_FIELDS=['username', 'login', 'email']
-        GET_URL=True
-        EXCLUDE_ROWS=['^---$']
+        pass2csv ~/.password-store -x -l username login email -u -e '^---$'
 
 - Password entry (`sites/example`)
 
@@ -55,16 +80,15 @@ There are two ways to export CSV data:
 
         sites, example, user_name, password123, example.com, "email: user@example.com\nsome_note"
 
-- `user_name` was chosen because `username` was the first filled entry in
-  `LOGIN_FIELDS`.
-- Both logn and URL fields were excluded from the notes field because they were used
-in another field.
-- `---` Was not included in the notes field because it was matched in `EXCLUDE_ROWS`.
+- `user_name` was chosen because `username` was the first argument to `-l`.
+- Both logn and URL fields were excluded from the notes field because they
+  were used in another field.
+- `---` Was not included in the notes field because it was matched by `-e`.
 
 ### Example KeePass Generic CSV Importer
-- Variable definitions (`pass2csv.py`)
+- Cmd line
 
-        KPX_FORMAT=False
+        pass2csv ~/.password-store
 
 - Password entry: Same as above
 - Output CSV row (formatted)
