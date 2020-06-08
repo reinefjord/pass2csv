@@ -1,4 +1,7 @@
 # pass2csv
+
+Source is available [at GitHub](https://github.com/reinefjord/pass2csv).
+
 Requires [python-gnupg](https://pypi.python.org/pypi/python-gnupg) and python3.
 Run with path to password store as argument:
 

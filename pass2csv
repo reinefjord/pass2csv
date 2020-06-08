@@ -10,7 +10,7 @@ import gnupg
 logger = logging.getLogger(__name__)
 
 
-class CSVExporter():
+class CSVExporter:
     def __init__(self, kpx_format, login_fields, get_url, exclude_rows):
         logging.basicConfig(level=logging.INFO)
         self.logger = logger
