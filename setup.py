@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pass2csv",
-    version="0.1.1",
+    version="0.1.2",
     author="Rupus Reinefjord",
     author_email="rupus@reinefjord.net",
     description='Export pass(1), "the standard unix password manager", to CSV',
