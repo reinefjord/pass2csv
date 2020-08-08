@@ -3,7 +3,7 @@ import csv
 import logging
 import os
 import re
-from argparse import ArgumentParser
+from argparse import Action, ArgumentParser
 
 import gnupg
 
@@ -125,6 +125,14 @@ def main(gpgbinary, use_agent, pass_path,
         writer.writerows(csv_data)
 
 
+class ExtendAction(Action):
+    # Python 3.8 has 'extend' built in.
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest) or []
+        items.extend(values)
+        setattr(namespace, self.dest, items)
+
+
 class OptionsParser(ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -160,7 +168,7 @@ class OptionsParser(ArgumentParser):
 
         self.add_argument(
             '-l', '--login-fields',
-            action='extend',
+            action=ExtendAction,
             nargs='+',
             type=str,
             help="strings to interpret as names of login fields (only used with -x)"
@@ -174,7 +182,7 @@ class OptionsParser(ArgumentParser):
 
         self.add_argument(
             '-e', '--exclude-rows',
-            action='extend',
+            action=ExtendAction,
             nargs='+',
             type=str,
             help="regexps to exclude from the notes field (only used with -x)"
