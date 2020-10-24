@@ -3,7 +3,8 @@ import csv
 import logging
 import os
 import re
-from argparse import Action, ArgumentParser
+import pathlib
+from argparse import Action, ArgumentParser, FileType
 
 import gnupg
 
@@ -90,8 +91,16 @@ class CSVExporter:
         return (user, url, '\n'.join(notes).strip())
 
     def parse(self, basepath, path, data):
-        name = os.path.splitext(os.path.basename(path))[0]
+        p = pathlib.Path(path)
+        name = p.stem
         group = os.path.dirname(os.path.os.path.relpath(path, basepath))
+        if not group:
+            try:
+                parts = list(p.parts[:-1])
+                i = parts.index('.password-store')
+                group = os.path.join(*parts[i+1:])
+            except ValueError:
+                pass
         split_data = data.split('\n', maxsplit=1)
         password = split_data[0]
         # Perform if/else in case there are no notes for a field
@@ -107,7 +116,7 @@ class CSVExporter:
 
 
 def main(gpgbinary, use_agent, pass_path,
-         kpx_format, login_fields, get_url, exclude_rows):
+         kpx_format, login_fields, get_url, exclude_rows, outfile):
     exporter = CSVExporter(kpx_format, login_fields, get_url, exclude_rows)
     gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
     gpg.encoding = 'utf-8'
@@ -120,9 +129,9 @@ def main(gpgbinary, use_agent, pass_path,
                     logger.warning("Could not decrypt %s or it is empty.", file_path)
                 csv_data.append(exporter.parse(pass_path, file_path, data))
 
-    with open('pass.csv', 'w', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
-        writer.writerows(csv_data)
+    writer = csv.writer(outfile, delimiter=',')
+    writer.writerows(csv_data)
+    outfile.close()
 
 
 class ExtendAction(Action):
@@ -157,6 +166,14 @@ class OptionsParser(ArgumentParser):
             help="path to the gpg binary you wish to use",
             dest='gpgbinary',
             default="gpg"
+        )
+
+        self.add_argument(
+            '-o', '--outfile',
+            type=FileType('w'),
+            help="Store to an output file",
+            dest='outfile',
+            default="-"
         )
 
         self.add_argument(
