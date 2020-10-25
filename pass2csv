@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import pathlib
+import sys
+from functools import partial
 from argparse import Action, ArgumentParser, FileType
 
 import gnupg
@@ -12,15 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class CSVExporter:
-    def __init__(self, kpx_format, login_fields, get_url, exclude_rows):
+    def __init__(self, fmt, login_fields, get_url, exclude_rows):
         logging.basicConfig(level=logging.INFO)
         self.logger = logger
+        self.fmt = fmt
 
-        # Set to True to allow for alternate password csv to be created
-        # See README for differences
-        self.kpx_format = kpx_format
-
-        if self.kpx_format:
+        if self.fmt == 'kpx':
             # A list of possible fields (in order) that could be converted to
             # login fields
             self.login_fields = login_fields or []
@@ -30,7 +29,7 @@ class CSVExporter:
             # the notes field
             self.exclude_rows = exclude_rows or []
 
-        self.logger.info("Using KPX format: %s", self.kpx_format)
+        self.logger.info("Using format: %s", self.fmt)
 
     def traverse(self, path):
         for root, dirs, files in os.walk(path):
@@ -93,6 +92,7 @@ class CSVExporter:
     def parse(self, basepath, path, data):
         p = pathlib.Path(path)
         name = p.stem
+        notes = host = url = ''
         group = os.path.dirname(os.path.os.path.relpath(path, basepath))
         if not group:
             try:
@@ -103,21 +103,46 @@ class CSVExporter:
                 pass
         split_data = data.split('\n', maxsplit=1)
         password = split_data[0]
+
         # Perform if/else in case there are no notes for a field
-        notes = split_data[1] if len(split_data) > 1 else ""
+        notes += split_data[1] if len(split_data) > 1 else ""
         self.logger.info("Processing %s", name)
-        if self.kpx_format:
+
+        if self.fmt == 'kpx':
             # We are using the advanced format; try extracting user and url
             user, url, notes = self.get_metadata(notes)
-            return [group, name, user, password, url, notes]
-        else:
-            # We are not using KPX format; just use notes
-            return [group, name, password, notes]
+        notes = notes.strip()
 
+        # Distinguish a possible "host" from a possible "url"
+        if url and not host and '/' not in url :
+            host = url
+            url = None
+        if not host and url:
+            host = re.sub(r'.*://', '', url)
+            host = re.sub(r'/.*', '', host)
+        if host and not url:
+            url = 'https://' + host
+
+        # Alias "notes" to "description"
+        description = notes
+
+        ret = {}
+        for i in ('group', 'name', 'user', 'password', 'url', 'host', 'notes', 'description'):
+            ret[i] = locals()[i] if i in locals() else ''
+        return ret
+
+    def format_data(self, fmt, data):
+        if fmt == 'kpx':
+            fmt = '{group},{name},{user},{password},{url},{notes}'
+        elif fmt == 'default':
+            fmt = '{group},{name},{password},{notes}'
+        elif fmt == 'passbolt':
+            fmt = "{host},{user},{password},{description},{name}"
+        return [i.format_map(data) for i in fmt.split(',')]
 
 def main(gpgbinary, use_agent, pass_path,
-         kpx_format, login_fields, get_url, exclude_rows, outfile):
-    exporter = CSVExporter(kpx_format, login_fields, get_url, exclude_rows)
+         fmt, login_fields, get_url, exclude_rows, outfile, csv_delimiter):
+    exporter = CSVExporter(fmt, login_fields, get_url, exclude_rows)
     gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
     gpg.encoding = 'utf-8'
     csv_data = []
@@ -127,9 +152,11 @@ def main(gpgbinary, use_agent, pass_path,
                 data = str(gpg.decrypt_file(f))
                 if len(data) == 0:
                     logger.warning("Could not decrypt %s or it is empty.", file_path)
-                csv_data.append(exporter.parse(pass_path, file_path, data))
+                data = exporter.parse(pass_path, file_path, data)
+                data = exporter.format_data(fmt, data)
+                csv_data.append(data)
 
-    writer = csv.writer(outfile, delimiter=',')
+    writer = csv.writer(outfile, delimiter=csv_delimiter.replace('TAB', "\t"))
     writer.writerows(csv_data)
     outfile.close()
 
@@ -177,9 +204,25 @@ class OptionsParser(ArgumentParser):
         )
 
         self.add_argument(
+            '-k', '--delimiter',
+            type=str,
+            help="CSV delimiter",
+            dest='csv_delimiter',
+            default=","
+        )
+
+        self.add_argument(
+            '-f', '--format',
+            type=str,
+            help="A comma-separate list of field among host,url,user,password,notes,description,name or one of the predefined format: kpx, passbolt or default",
+            dest='fmt',
+            default="default"
+        )
+
+        self.add_argument(
             '-x', '--kpx',
             action='store_true',
-            help="format the CSV for KeePassXC",
+            help="A shortcut for -f kpx, the KeePassXC CSV format",
             dest='kpx_format',
         )
 
@@ -209,4 +252,7 @@ class OptionsParser(ArgumentParser):
 if __name__ == '__main__':
     PARSER = OptionsParser()
     ARGS = PARSER.parse_args()
+    if ARGS.kpx_format:
+        ARGS.fmt = 'kpx'
+    del ARGS.kpx_format
     main(**vars(ARGS))
