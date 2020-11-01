@@ -93,19 +93,12 @@ class CSVExporter:
     def parse(self, basepath, path, data):
         p = pathlib.Path(path)
         name = p.stem
-        group = os.path.dirname(os.path.os.path.relpath(path, basepath))
-        if not group:
-            try:
-                parts = list(p.parts[:-1])
-                i = parts.index('.password-store')
-                group = os.path.join(*parts[i+1:])
-            except ValueError:
-                pass
+        self.logger.info("Processing %s", name)
+        group = os.path.dirname(os.path.relpath(path, basepath))
         split_data = data.split('\n', maxsplit=1)
         password = split_data[0]
         # Perform if/else in case there are no notes for a field
         notes = split_data[1] if len(split_data) > 1 else ""
-        self.logger.info("Processing %s", name)
         if self.kpx_format:
             # We are using the advanced format; try extracting user and url
             user, url, notes = self.get_metadata(notes)
@@ -115,7 +108,7 @@ class CSVExporter:
             return [group, name, password, notes]
 
 
-def main(gpgbinary, use_agent, pass_path,
+def main(gpgbinary, use_agent, pass_path, base_path,
          kpx_format, login_fields, get_url, exclude_rows, outfile):
     exporter = CSVExporter(kpx_format, login_fields, get_url, exclude_rows)
     gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
@@ -127,7 +120,9 @@ def main(gpgbinary, use_agent, pass_path,
                 data = str(gpg.decrypt_file(f))
                 if len(data) == 0:
                     logger.warning("Could not decrypt %s or it is empty.", file_path)
-                csv_data.append(exporter.parse(pass_path, file_path, data))
+                base = base_path if base_path else pass_path
+                parsed = exporter.parse(base, file_path, data)
+                csv_data.append(parsed)
 
     writer = csv.writer(outfile, delimiter=',')
     writer.writerows(csv_data)
@@ -154,6 +149,13 @@ class OptionsParser(ArgumentParser):
         )
 
         self.add_argument(
+            '-b', '--base',
+            type=str,
+            help="path to use as base for grouping passwords",
+            dest='base_path'
+        )
+
+        self.add_argument(
             '-a', '--agent',
             action='store_true',
             help="ask gpg to use its auth agent",
@@ -161,7 +163,7 @@ class OptionsParser(ArgumentParser):
         )
 
         self.add_argument(
-            '-b', '--gpgbinary',
+            '-g', '--gpgbinary',
             type=str,
             help="path to the gpg binary you wish to use",
             dest='gpgbinary',
