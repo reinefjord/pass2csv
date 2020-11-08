@@ -32,6 +32,13 @@ optional arguments:
 ```
 
 
+## Granting GPG access
+
+If you don't already have it set, you can add a timeout period for gpg-agent in ~/.gnupg/gpg-agent.conf with this line:
+`default-cache-ttl 3600`
+This will tell gpg-agent to store the passphrase for one hour. Use Pass to trigger the login, then you have an hour to use pass2csv without an authentication error.
+
+
 ## Export format
 There are two ways to export CSV data:
 
