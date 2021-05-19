@@ -48,7 +48,7 @@ The output format is
     Group(/),Title,Password,[custom fields...],Notes
 
 You may add custom fields with `--get-field` or `--get-line`. You supply
-a name for the field and a regexp pattern. The field name is used for
+a *name* for the field and a regexp *pattern*. The field name is used for
 the header of the output CSV and to group multiple patterns for the same
 field; you may specify multiple patterns for the same field by
 specifying `--get-field` or`--get-line` multiple times with the same
@@ -87,7 +87,7 @@ sites/example,login,password123,example.com,user_name,"email user@example.com\nS
 
 ### Grouping
 
-The group is relative to the path, or the --base if given.
+The group is relative to the path, or the `--base` if given.
 Given the password `~/.password-store/site/login/password.gpg`:
 
     $ pass2csv ~/.password-store/site
