@@ -1,214 +1,277 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import logging
-import os
-import re
 import pathlib
-from argparse import Action, ArgumentParser, FileType
+import re
+import sys
 
 import gnupg
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
-class CSVExporter:
-    def __init__(self, kpx_format, login_fields, get_url, exclude_rows):
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logger
+def set_meta(entry, path, grouping_base):
+    pure_path = pathlib.PurePath(path)
+    group = pure_path.relative_to(grouping_base).parent
+    if group.name == '':
+        group = ''
+    entry['group'] = group
+    entry['title'] = pure_path.stem
 
-        # Set to True to allow for alternate password csv to be created
-        # See README for differences
-        self.kpx_format = kpx_format
 
-        if self.kpx_format:
-            # A list of possible fields (in order) that could be converted to
-            # login fields
-            self.login_fields = login_fields or []
-            # Set to True to extract url fields
-            self.get_url = get_url
-            # A regular expression list of lines that should be excluded from
-            # the notes field
-            self.exclude_rows = exclude_rows or []
+def set_data(entry, data, exclude, get_fields, get_lines):
+    lines = data.splitlines()
+    tail = lines[1:]
+    entry['password'] = lines[0]
 
-        self.logger.info("Using KPX format: %s", self.kpx_format)
-
-    def traverse(self, path):
-        for root, dirs, files in os.walk(path):
-            if '.git' in dirs:
-                dirs.remove('.git')
-            for name in files:
-                yield os.path.join(root, name)
-
-    def get_metadata(self, notes_raw):
-        lines = notes_raw.split('\n')
-
-        # A list of lines to keep as notes (will be joined by newline)
-        notes = []
-        # The extracted user field
-        user = ''
-        # The extracted URL field
-        url = ''
-
-        # This will extract each field name (for example, if a line in notes
-        # was `user: user1`, fields should contain 'user')
-        all_fields = set()
-        for line in lines:
-            field_search = re.search('^(.*) ?: ?.*$', line, re.I)
-            if field_search:
-                all_fields.add(field_search.group(1))
-
-        # Check if any of the fields match the login names
-        login_fields = [
-            field for field in self.login_fields if field in all_fields
-        ]
-        # Get the field to use for the login. Since self.login_fields is in order,
-        # the 0th element will contain the first match
-        login_field = None if not login_fields else login_fields[0]
-
-        # Iterate through the file again to build the return array
-        for line in lines:
-            # If any of the exclusion patterns match, ignore the line
-            if [pattern for pattern in self.exclude_rows if re.search(pattern, line, re.I)]:
-                continue
-
-            if login_field:
-                user_search = re.search(
-                    '^' + login_field + ' ?: ?(.*)$', line, re.I)
-                if user_search:
-                    user = user_search.group(1)
-                    # The user was matched, don't add it to notes
-                    continue
-
-            if self.get_url:
-                url_search = re.search('^url ?: ?(.*)$', line, re.I)
-                if url_search:
-                    url = url_search.group(1)
-                    # The url was matched, don't add it to notes
-                    continue
-
-            notes.append(line)
-
-        return (user, url, '\n'.join(notes).strip())
-
-    def parse(self, basepath, path, data):
-        p = pathlib.Path(path)
-        name = p.stem
-        self.logger.info("Processing %s", name)
-        group = os.path.dirname(os.path.relpath(path, basepath))
-        split_data = data.split('\n', maxsplit=1)
-        password = split_data[0]
-        # Perform if/else in case there are no notes for a field
-        notes = split_data[1] if len(split_data) > 1 else ""
-        if self.kpx_format:
-            # We are using the advanced format; try extracting user and url
-            user, url, notes = self.get_metadata(notes)
-            return [group, name, user, password, url, notes]
+    filtered_tail = []
+    for line in tail:
+        for exclude_pattern in exclude:
+            if exclude_pattern.search(line):
+                break
         else:
-            # We are not using KPX format; just use notes
-            return [group, name, password, notes]
+            filtered_tail.append(line)
+
+    matching_indices = set()
+    fields = entry.setdefault('fields', {})
+
+    for i, line in enumerate(filtered_tail):
+        for (name, pattern) in get_fields:
+            if name in fields:
+                # multiple patterns with same name, we've already found a match
+                continue
+            match = pattern.search(line)
+            if not match:
+                continue
+            inverse_match = line[0:match.start()] + line[match.end():]
+            value = inverse_match.strip()
+            fields[name] = value
+            matching_indices.add(i)
+            break
+
+    matching_lines = {}
+    for i, line in enumerate(filtered_tail):
+        for (name, pattern) in get_lines:
+            match = pattern.search(line)
+            if not match:
+                continue
+            matches = matching_lines.setdefault(name, [])
+            matches.append(line)
+            matching_indices.add(i)
+            break
+    for name, matches in matching_lines.items():
+        fields[name] = '\n'.join(matching_lines)
+
+    final_tail = []
+    for i, line in enumerate(filtered_tail):
+        if i not in matching_indices:
+            final_tail.append(line)
+
+    entry['notes'] = '\n'.join(final_tail).strip()
 
 
-def main(gpgbinary, use_agent, pass_path, base_path,
-         kpx_format, login_fields, get_url, exclude_rows, outfile):
-    exporter = CSVExporter(kpx_format, login_fields, get_url, exclude_rows)
-    gpg = gnupg.GPG(use_agent=use_agent, gpgbinary=gpgbinary)
-    gpg.encoding = 'utf-8'
-    csv_data = []
-    for file_path in exporter.traverse(pass_path):
-        if os.path.splitext(file_path)[1] == '.gpg':
-            with open(file_path, 'rb') as f:
-                data = str(gpg.decrypt_file(f))
-                if len(data) == 0:
-                    logger.warning("Could not decrypt %s or it is empty.", file_path)
-                base = base_path if base_path else pass_path
-                parsed = exporter.parse(base, file_path, data)
-                csv_data.append(parsed)
-
-    writer = csv.writer(outfile, delimiter=',')
-    writer.writerows(csv_data)
-    outfile.close()
+def write(file, entries, get_fields, get_lines):
+    get_field_names = set(x[0] for x in get_fields)
+    get_line_names = set(x[0] for x in get_lines)
+    field_names = get_field_names | get_line_names
+    header = ["Group(/)", "Title", "Password", *field_names, "Notes"]
+    csvw = csv.writer(file)
+    logging.info("Writing data to %s", file.name)
+    csvw.writerow(header)
+    for entry in entries:
+        fields = [entry['fields'].get(name) for name in field_names]
+        columns = [
+            entry['group'], entry['title'], entry['password'],
+            *fields,
+            entry['notes']
+        ]
+        csvw.writerow(columns)
 
 
-class ExtendAction(Action):
-    # Python 3.8 has 'extend' built in.
-    def __call__(self, parser, namespace, values, option_string=None):
-        items = getattr(namespace, self.dest) or []
-        items.extend(values)
-        setattr(namespace, self.dest, items)
+def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encoding,
+         exclude, get_fields, get_lines):
+    entries = []
+    failures = []
+    path = pathlib.Path(store_path)
+    grouping_path = pathlib.Path(grouping_base)
+    gpg = gnupg.GPG(gpgbinary=gpgbinary, use_agent=use_agent)
+    gpg.encoding = encoding
+    for file in path.glob('**/*.gpg'):
+        logging.info("Processing %s", file)
+        with open(file, 'rb') as fp:
+            decrypted = gpg.decrypt_file(fp)
+        if not decrypted.ok:
+            logging.error("Could not decrypt %s: %s", file, decrypted.status)
+            failures.append((file, decrypted.status))
+            continue
+        entry = {}
+        set_meta(entry, file, grouping_path)
+        set_data(entry, str(decrypted), exclude, get_fields, get_lines)
+        entries.append(entry)
+    if failures:
+        for file, status in failures:
+            logging.warning("Could not decrypt %s: %s", file, status)
+    write(outfile, entries, get_fields, get_lines)
 
 
-class OptionsParser(ArgumentParser):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def parse_args(args):
+    class ExtendAction(argparse.Action):
+        # Python 3.8 has 'extend' built in.
+        def __call__(self, parser, namespace, values, option_string=None):
+            items = getattr(namespace, self.dest) or []
+            items.extend(values)
+            setattr(namespace, self.dest, items)
 
-        self.add_argument(
-            'pass_path',
-            metavar='path',
-            type=str,
-            help="path to the password-store folder to export",
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'store_path',
+        type=str,
+        help="path to the password-store to export",
+    )
+
+    parser.add_argument(
+        '-b', '--base',
+        metavar='path',
+        type=str,
+        help="path to use as base for grouping passwords",
+        dest='base_path'
+    )
+
+    parser.add_argument(
+        '-g', '--gpg',
+        metavar='executable',
+        type=str,
+        default="gpg",
+        help="path to the gpg binary you wish to use (default 'gpg')",
+        dest='gpgbinary'
+    )
+
+    parser.add_argument(
+        '-a', '--use-agent',
+        action='store_true',
+        default=False,
+        help="ask gpg to use its auth agent",
+        dest='use_agent'
+    )
+
+    parser.add_argument(
+        '--encoding',
+        metavar='encoding',
+        type=str,
+        default="utf-8",
+        help="text encoding to use when reading gpg output (default 'utf-8')",
+        dest='encoding'
+    )
+
+    parser.add_argument(
+        '-o', '--outfile',
+        metavar='file',
+        type=argparse.FileType('w'),
+        default="-",
+        help="file to write exported data to (default stdin)",
+        dest='outfile'
+    )
+
+    parser.add_argument(
+        '-e', '--exclude',
+        metavar='pattern',
+        action=ExtendAction,
+        nargs='+',
+        type=str,
+        default=[],
+        help="regexps for lines which should not be exported",
+        dest='exclude'
+    )
+
+    parser.add_argument(
+        '-f', '--get-field',
+        metavar=('name', 'pattern'),
+        action='append',
+        nargs=2,
+        type=str,
+        default=[],
+        help=(
+            "a name and a regexp, the part of the line matching the regexp"
+            " will be removed and the remaining line will be added to a field"
+            " with the chosen name. only one match per password, matching"
+            " stops after the first match"
+        ),
+        dest='get_fields'
+    )
+
+    parser.add_argument(
+        '-l', '--get-line',
+        metavar=('name', 'pattern'),
+        action='append',
+        nargs=2,
+        type=str,
+        default=[],
+        help=(
+            "a name and a regexp for which all lines that match are included"
+            " in a field with the chosen name"
+        ),
+        dest='get_lines'
+    )
+
+    return parser.parse_args(args)
+
+
+def compile_regexp(pattern):
+    try:
+        regexp = re.compile(pattern, re.I)
+    except re.error as e:
+        logging.error(
+            "Could not compile pattern '%s', %s at position %s",
+            pattern.replace("'", "\\'"), e.msg, e.pos
         )
-
-        self.add_argument(
-            '-b', '--base',
-            type=str,
-            help="path to use as base for grouping passwords",
-            dest='base_path'
-        )
-
-        self.add_argument(
-            '-a', '--agent',
-            action='store_true',
-            help="ask gpg to use its auth agent",
-            dest='use_agent',
-        )
-
-        self.add_argument(
-            '-g', '--gpgbinary',
-            type=str,
-            help="path to the gpg binary you wish to use",
-            dest='gpgbinary',
-            default="gpg"
-        )
-
-        self.add_argument(
-            '-o', '--outfile',
-            type=FileType('w'),
-            help="Store to an output file",
-            dest='outfile',
-            default="-"
-        )
-
-        self.add_argument(
-            '-x', '--kpx',
-            action='store_true',
-            help="format the CSV for KeePassXC",
-            dest='kpx_format',
-        )
-
-        self.add_argument(
-            '-l', '--login-fields',
-            action=ExtendAction,
-            nargs='+',
-            type=str,
-            help="strings to interpret as names of login fields (only used with -x)"
-        )
-
-        self.add_argument(
-            '-u', '--get-url',
-            action='store_true',
-            help="match row starting with 'url:' and extract it (only used with -x)"
-        )
-
-        self.add_argument(
-            '-e', '--exclude-rows',
-            action=ExtendAction,
-            nargs='+',
-            type=str,
-            help="regexps to exclude from the notes field (only used with -x)"
-        )
+        return None
+    return regexp
 
 
 if __name__ == '__main__':
-    PARSER = OptionsParser()
-    ARGS = PARSER.parse_args()
-    main(**vars(ARGS))
+    parsed = parse_args(sys.argv[1:])
+
+    failed = False
+    exclude_patterns = []
+    for pattern in parsed.exclude:
+        regexp = compile_regexp(pattern)
+        if not regexp:
+            failed = True
+        exclude_patterns.append(regexp)
+
+    get_fields = []
+    for (name, pattern) in parsed.get_fields:
+        regexp = compile_regexp(pattern)
+        if not regexp:
+            failed = True
+        get_fields.append((name, regexp))
+
+    get_lines = []
+    for (name, pattern) in parsed.get_lines:
+        regexp = compile_regexp(pattern)
+        if not regexp:
+            failed = True
+        get_lines.append((name, regexp))
+
+    if failed:
+        sys.exit(1)
+
+    if parsed.base_path:
+        grouping_base = parsed.base_path
+    else:
+        grouping_base = parsed.store_path
+
+    kwargs = {
+        'store_path': parsed.store_path,
+        'grouping_base': grouping_base,
+        'gpgbinary': parsed.gpgbinary,
+        'use_agent': parsed.use_agent,
+        'encoding': parsed.encoding,
+        'outfile': parsed.outfile,
+        'exclude': exclude_patterns,
+        'get_fields': get_fields,
+        'get_lines': get_lines
+    }
+
+    main(**kwargs)

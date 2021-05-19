@@ -11,92 +11,94 @@ You can install it directly from PyPI with pip:
 
 ```
 $ pass2csv --help
-usage: pass2csv [-h] [-a] [-b GPGBINARY] [-x] [-l LOGIN_FIELDS [LOGIN_FIELDS ...]] [-u]
-                [-e EXCLUDE_ROWS [EXCLUDE_ROWS ...]]
-                path
+usage: pass2csv [-h] [-b path] [-g executable] [-a] [--encoding encoding] [-o file]
+                [-e pattern [pattern ...]] [-f name pattern] [-l name pattern]
+                store_path
 
 positional arguments:
-  path                  path to the password-store folder to export
+  store_path            path to the password-store to export
 
 optional arguments:
   -h, --help            show this help message and exit
-  -a, --agent           ask gpg to use its auth agent
-  -b GPGBINARY, --gpgbinary GPGBINARY
-                        path to the gpg binary you wish to use
-  -x, --kpx             format the CSV for KeePassXC
-  -l LOGIN_FIELDS [LOGIN_FIELDS ...], --login-fields LOGIN_FIELDS [LOGIN_FIELDS ...]
-                        strings to interpret as names of login fields (only used with -x)
-  -u, --get-url         match row starting with 'url:' and extract it (only used with -x)
-  -e EXCLUDE_ROWS [EXCLUDE_ROWS ...], --exclude-rows EXCLUDE_ROWS [EXCLUDE_ROWS ...]
-                        regexps to exclude from the notes field (only used with -x)
+  -b path, --base path  path to use as base for grouping passwords
+  -g executable, --gpg executable
+                        path to the gpg binary you wish to use (default 'gpg')
+  -a, --use-agent       ask gpg to use its auth agent
+  --encoding encoding   text encoding to use when reading gpg output (default
+                        'utf-8')
+  -o file, --outfile file
+                        file to write exported data to (default stdin)
+  -e pattern [pattern ...], --exclude pattern [pattern ...]
+                        regexps for lines which should not be exported
+  -f name pattern, --get-field name pattern
+                        a name and a regexp, the part of the line matching the
+                        regexp will be removed and the remaining line will be added
+                        to a field with the chosen name. only one match per
+                        password, matching stops after the first match
+  -l name pattern, --get-line name pattern
+                        a name and a regexp for which all lines that match are
+                        included in a field with the chosen name
 ```
 
 
-## Export format
-There are two ways to export CSV data:
+### Format
 
-1.  The format for the KeePass Generic CSV Importer:
+The output format is
 
-        Group(/),Title,Password,Notes
+    Group(/),Title,Password,[custom fields...],Notes
 
-    Where 'Password' is the first line of the entry in `pass` and
-    'Notes' are all subsequent lines. '\\' should not be interpreted as
-    an escape character.
-
-    This is the default mode.
-
-2.  The format for the KeePassXC Importer:
-
-        Group(/),Title,Login,Password,URL,Notes
-
-    Where 'Password' is the first line of the entry in `pass`, 'User' is
-    configured with `-l`, URL is extracted if `-u` is
-    set, and 'Notes' contains any other fields that do not match
-    `-e`.
-
-    'User' field is chosen by searching for the first field with a name
-    set by `-l`. Once the field is found, the login is set and the field
-    is removed from notes.
-
-    Use `-x` or `--kpx` to enable this mode.
+You may add custom fields with `--get-field` or `--get-line`. You supply
+a name for the field and a regexp pattern. The field name is used for
+the header of the output CSV and to group multiple patterns for the same
+field; you may specify multiple patterns for the same field by
+specifying `--get-field` or`--get-line` multiple times with the same
+name. Regexps are case-insensitive.
 
 
-### Example KeePassXC Import
-- Cmd line
+### Examples
 
-        pass2csv ~/.password-store -x -l username login email -u -e '^---$'
+* Password entry (`~/.password-store/sites/example/login.gpg`):
 
-- Password entry (`sites/example`)
+```
+password123
+---
+username: user_name
+email user@example.com
+url:example.com
+Some note
+```
 
-        password123
-        ---
-        username: user_name
-        email: user@example.com
-        url: example.com
-        some_note
+* Command
 
-- Output CSV row (formatted)
+```
+pass2csv ~/.password-store \
+  --exclude '^---$' \
+  --get-field Username '(username|email):?' \
+  --get-field URL 'url:?'
+```
 
-        sites, example, user_name, password123, example.com, "email: user@example.com\nsome_note"
+* Output
 
-- `user_name` was chosen because `username` was the first argument to `-l`.
-- Both login and URL fields were excluded from the notes field because they
-  were used in another field.
-- `---` Was not included in the notes field because it was matched by `-e`.
+```
+Group(/),Title,Password,URL,Username,Notes
+sites/example,login,password123,example.com,user_name,"email user@example.com\nSome note"
+```
 
 
-### Example KeePass Generic CSV Importer
-- Cmd line
+### Grouping
 
-        pass2csv ~/.password-store
+The group is relative to the path, or the --base if given.
+Given the password `~/.password-store/site/login/password.gpg`:
 
-- Password entry: Same as above
-- Output CSV row (formatted)
+    $ pass2csv ~/.password-store/site
+        # Password will have group "login"
 
-        sites, example, password123, "---\nusername: user_name\nemail: user@example.com\nurl: example.com\nsome_note"
+    $ pass2csv ~/.password-store/site --base:~/.password-store
+        # Password will have group "site/login"
 
 
 ## Development
+
 Create a virtual environment:
 
     python3 -m venv venv
@@ -115,6 +117,7 @@ you can install `pip-tools`. The latter is recommended.
 
 
 ### pip-tools
+
 [pip-tools](https://github.com/jazzband/pip-tools) can keep your virtual
 environment in sync with the `requirements.txt` file, as well as
 compiling a new `requirements.txt` when adding/removing a dependency in
