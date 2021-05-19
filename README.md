@@ -97,6 +97,22 @@ Given the password `~/.password-store/sites/example/login.gpg`:
         # Password will have group "sites/example"
 
 
+## gpg-agent password timeout
+
+If your private key is protected by a password, `gpg` will ask for it
+with the `pinentry` program if you haven't set it to something else. If
+using `gpg2` or the `-a` option with `gpg`, by default, the password is
+cached for 10 minutes but the timer is reset when using a key. After 2
+hours the cache will be cleared even if it has been accessed recently.
+
+You can set these values in your `~/.gnupg/gpg-agent.conf`:
+
+```
+default-cache-ttl 600
+max-cache-ttl 7200
+```
+
+
 ## Development
 
 Create a virtual environment:
