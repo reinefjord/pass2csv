@@ -88,13 +88,13 @@ sites/example,login,password123,example.com,user_name,"email user@example.com\nS
 ### Grouping
 
 The group is relative to the path, or the `--base` if given.
-Given the password `~/.password-store/site/login/password.gpg`:
+Given the password `~/.password-store/sites/example/login.gpg`:
 
-    $ pass2csv ~/.password-store/site
-        # Password will have group "login"
+    $ pass2csv ~/.password-store/sites
+        # Password will have group "example"
 
-    $ pass2csv ~/.password-store/site --base:~/.password-store
-        # Password will have group "site/login"
+    $ pass2csv ~/.password-store/sites --base:~/.password-store
+        # Password will have group "sites/example"
 
 
 ## Development
