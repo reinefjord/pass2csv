@@ -37,7 +37,7 @@ def set_data(entry, data, exclude, get_fields, get_lines):
     fields = entry.setdefault('fields', {})
 
     for i, line in enumerate(filtered_tail):
-        for (name, pattern) in get_fields:
+        for name, pattern in get_fields:
             if name in fields:
                 # multiple patterns with same name, we've already found a match
                 continue
@@ -52,7 +52,7 @@ def set_data(entry, data, exclude, get_fields, get_lines):
 
     matching_lines = {}
     for i, line in enumerate(filtered_tail):
-        for (name, pattern) in get_lines:
+        for name, pattern in get_lines:
             match = pattern.search(line)
             if not match:
                 continue
@@ -241,14 +241,14 @@ if __name__ == '__main__':
         exclude_patterns.append(regexp)
 
     get_fields = []
-    for (name, pattern) in parsed.get_fields:
+    for name, pattern in parsed.get_fields:
         regexp = compile_regexp(pattern)
         if not regexp:
             failed = True
         get_fields.append((name, regexp))
 
     get_lines = []
-    for (name, pattern) in parsed.get_lines:
+    for name, pattern in parsed.get_lines:
         regexp = compile_regexp(pattern)
         if not regexp:
             failed = True
