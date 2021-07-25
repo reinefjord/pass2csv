@@ -52,7 +52,7 @@ a *name* for the field and a regexp *pattern*. The field name is used for
 the header of the output CSV and to group multiple patterns for the same
 field; you may specify multiple patterns for the same field by
 specifying `--get-field` or`--get-line` multiple times with the same
-name. Regexps are case-insensitive.
+name. Regexp patterns are case-insensitive.
 
 
 ### Examples
@@ -93,7 +93,7 @@ Given the password `~/.password-store/sites/example/login.gpg`:
     $ pass2csv ~/.password-store/sites
         # Password will have group "example"
 
-    $ pass2csv ~/.password-store/sites --base:~/.password-store
+    $ pass2csv ~/.password-store/sites --base ~/.password-store
         # Password will have group "sites/example"
 
 
