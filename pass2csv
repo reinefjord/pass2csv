@@ -283,7 +283,7 @@ if __name__ == '__main__':
     encodings = [e for e in parsed.encodings.split(',') if e]
     if not encodings:
         logging.error(
-            "Did not understand '--encoding {}'".format(parsed.encoding)
+            "Did not understand '--encodings {}'".format(parsed.encoding)
         )
         sys.exit(1)
 
