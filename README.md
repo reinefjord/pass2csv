@@ -11,8 +11,8 @@ You can install it directly from PyPI with pip:
 
 ```
 $ pass2csv --help
-usage: pass2csv [-h] [-b path] [-g executable] [-a] [--encoding encoding] [-o file]
-                [-e pattern [pattern ...]] [-f name pattern] [-l name pattern]
+usage: pass2csv [-h] [-b path] [-g executable] [-a] [--encodings encodings]
+                [-o file] [-e pattern] [-f name pattern] [-l name pattern]
                 store_path
 
 positional arguments:
@@ -24,17 +24,19 @@ optional arguments:
   -g executable, --gpg executable
                         path to the gpg binary you wish to use (default 'gpg')
   -a, --use-agent       ask gpg to use its auth agent
-  --encoding encoding   text encoding to use when reading gpg output (default
-                        'utf-8')
+  --encodings encodings
+                        comma-separated text encodings to try, in order, when
+                        decoding gpg output (default 'utf-8')
   -o file, --outfile file
                         file to write exported data to (default stdin)
-  -e pattern [pattern ...], --exclude pattern [pattern ...]
-                        regexps for lines which should not be exported
+  -e pattern, --exclude pattern
+                        regexp for lines which should not be exported, can be
+                        specified multiple times
   -f name pattern, --get-field name pattern
                         a name and a regexp, the part of the line matching the
-                        regexp will be removed and the remaining line will be added
-                        to a field with the chosen name. only one match per
-                        password, matching stops after the first match
+                        regexp will be removed and the remaining line will be
+                        added to a field with the chosen name. only one match
+                        per password, matching stops after the first match
   -l name pattern, --get-line name pattern
                         a name and a regexp for which all lines that match are
                         included in a field with the chosen name
