@@ -89,29 +89,49 @@ def write(file, entries, get_fields, get_lines):
         csvw.writerow(columns)
 
 
-def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encoding,
+def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
          exclude, get_fields, get_lines):
     entries = []
     failures = []
     path = pathlib.Path(store_path)
     grouping_path = pathlib.Path(grouping_base)
     gpg = gnupg.GPG(gpgbinary=gpgbinary, use_agent=use_agent)
-    gpg.encoding = encoding
     for file in path.glob('**/*.gpg'):
         logging.info("Processing %s", file)
         with open(file, 'rb') as fp:
             decrypted = gpg.decrypt_file(fp)
         if not decrypted.ok:
-            logging.error("Could not decrypt %s: %s", file, decrypted.status)
-            failures.append((file, decrypted.status))
+            err = "Could not decrypt {}: {}".format(file, decrypted.status)
+            logging.error(err)
+            failures.append(err)
+            continue
+        for i, encoding in enumerate(encodings):
+            try:
+                # decrypted.data is bytes
+                decrypted_data = decrypted.data.decode(encoding)
+            except Exception as e:
+                logging.warning(
+                    "Could not decode {} with encoding {}: {}"
+                    .format(file, encoding, e)
+                )
+                continue
+            if i > 0:
+                # don't log if the first encoding worked
+                logging.warning("Decoded {} with encoding {}".format(file, encoding))
+            break
+        else:
+            err = "Could not decode {}, see warnings for more info.".format(file)
+            logging.error(err)
+            failures.append(err)
             continue
         entry = {}
         set_meta(entry, file, grouping_path)
-        set_data(entry, str(decrypted), exclude, get_fields, get_lines)
+        set_data(entry, decrypted_data, exclude, get_fields, get_lines)
         entries.append(entry)
     if failures:
-        for file, status in failures:
-            logging.warning("Could not decrypt %s: %s", file, status)
+        logging.warning("Got errors while processing files:")
+        for err in failures:
+            logging.warning(err)
     write(outfile, entries, get_fields, get_lines)
 
 
@@ -156,12 +176,15 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        '--encoding',
-        metavar='encoding',
+        '--encodings',
+        metavar='encodings',
         type=str,
         default="utf-8",
-        help="text encoding to use when reading gpg output (default 'utf-8')",
-        dest='encoding'
+        help=(
+            "comma-separated text encodings to try, in order, when decoding"
+            " gpg output (default 'utf-8')"
+        ),
+        dest='encodings'
     )
 
     parser.add_argument(
@@ -262,12 +285,19 @@ if __name__ == '__main__':
     else:
         grouping_base = parsed.store_path
 
+    encodings = [e for e in parsed.encodings.split(',') if e]
+    if not encodings:
+        logging.error(
+            "Did not understand '--encoding {}'".format(parsed.encoding)
+        )
+        sys.exit(1)
+
     kwargs = {
         'store_path': parsed.store_path,
         'grouping_base': grouping_base,
         'gpgbinary': parsed.gpgbinary,
         'use_agent': parsed.use_agent,
-        'encoding': parsed.encoding,
+        'encodings': encodings,
         'outfile': parsed.outfile,
         'exclude': exclude_patterns,
         'get_fields': get_fields,
