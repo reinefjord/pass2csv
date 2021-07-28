@@ -136,13 +136,6 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
 
 
 def parse_args(args):
-    class ExtendAction(argparse.Action):
-        # Python 3.8 has 'extend' built in.
-        def __call__(self, parser, namespace, values, option_string=None):
-            items = getattr(namespace, self.dest) or []
-            items.extend(values)
-            setattr(namespace, self.dest, items)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'store_path',
@@ -199,11 +192,13 @@ def parse_args(args):
     parser.add_argument(
         '-e', '--exclude',
         metavar='pattern',
-        action=ExtendAction,
-        nargs='+',
+        action='append',
         type=str,
         default=[],
-        help="regexps for lines which should not be exported",
+        help=(
+            "regexp for lines which should not be exported, can be specified"
+            " multiple times"
+        ),
         dest='exclude'
     )
 
