@@ -147,3 +147,13 @@ environment.
     pip install pip-tools
     pip-compile  # only necessary when adding/removing a dependency
     pip-sync
+
+
+### Packaging
+
+See [https://packaging.python.org/tutorials/packaging-projects/](https://packaging.python.org/tutorials/packaging-projects/) for detailed info.
+
+0. `pip-sync requirements.txt dev-requirements.txt`
+1. Increment `version` in `setup.cfg`.
+2. `python3 -m build`
+4. `python3 -m twine upload dist/*version*`
