@@ -98,8 +98,12 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
     gpg = gnupg.GPG(gpgbinary=gpgbinary, use_agent=use_agent)
     files = path.glob('**/*.gpg')
     if not path.is_dir():
-        #if store_path[-4:] == '.gpg':
-        files = [path]
+        if path.is_file():
+            files = [path]
+        else:
+            err="No shuch file or directory: {}".format(path)
+            logging.error(err)
+            exit(1)
     for file in files:
         logging.info("Processing %s", file)
         with open(file, 'rb') as fp:
