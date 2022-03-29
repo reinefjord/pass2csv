@@ -96,11 +96,10 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
     path = pathlib.Path(store_path)
     grouping_path = pathlib.Path(grouping_base)
     gpg = gnupg.GPG(gpgbinary=gpgbinary, use_agent=use_agent)
+    files = path.glob('**/*.gpg')
     if not path.is_dir():
-        if store_path[-4:] == '.gpg':
-            files = [path]
-    else:
-        files = path.glob('**/*.gpg')
+        #if store_path[-4:] == '.gpg':
+        files = [path]
     for file in files:
         logging.info("Processing %s", file)
         with open(file, 'rb') as fp:
