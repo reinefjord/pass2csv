@@ -101,7 +101,7 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
         if path.is_file():
             files = [path]
         else:
-            err="No shuch file or directory: {}".format(path)
+            err = "No such file or directory: {}".format(path)
             logging.error(err)
             exit(1)
     for file in files:
