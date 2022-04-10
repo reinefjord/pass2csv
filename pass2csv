@@ -103,7 +103,7 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
         else:
             err = "No such file or directory: {}".format(path)
             logging.error(err)
-            exit(1)
+            sys.exit(1)
     for file in files:
         logging.info("Processing %s", file)
         with open(file, 'rb') as fp:
