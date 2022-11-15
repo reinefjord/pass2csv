@@ -1,0 +1,3 @@
+#!/bin/bash
+
+PASSWORD_STORE_DIR=./password-store pass "${@}"
