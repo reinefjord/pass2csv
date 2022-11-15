@@ -61,7 +61,7 @@ def set_data(entry, data, exclude, get_fields, get_lines):
             matching_indices.add(i)
             break
     for name, matches in matching_lines.items():
-        fields[name] = '\n'.join(matching_lines)
+        fields[name] = '\n'.join(matches)
 
     final_tail = []
     for i, line in enumerate(filtered_tail):
