@@ -89,7 +89,7 @@ def write(file, entries, get_fields, get_lines):
         csvw.writerow(columns)
 
 
-def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
+def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
          exclude, get_fields, get_lines):
     entries = []
     failures = []
@@ -142,12 +142,20 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
     write(outfile, entries, get_fields, get_lines)
 
 
-def parse_args(args):
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'store_path',
+        metavar='STOREPATH',
         type=str,
         help="path to the password-store to export",
+    )
+
+    parser.add_argument(
+        'outfile',
+        metavar='OUTFILE',
+        type=argparse.FileType('w'),
+        help="file to write exported data to, use - for stdout",
     )
 
     parser.add_argument(
@@ -185,15 +193,6 @@ def parse_args(args):
             " gpg output (default 'utf-8')"
         ),
         dest='encodings'
-    )
-
-    parser.add_argument(
-        '-o', '--outfile',
-        metavar='file',
-        type=argparse.FileType('w'),
-        default="-",
-        help="file to write exported data to (default stdin)",
-        dest='outfile'
     )
 
     parser.add_argument(
@@ -255,7 +254,7 @@ def compile_regexp(pattern):
 
 
 if __name__ == '__main__':
-    parsed = parse_args(sys.argv[1:])
+    parsed = parse_args()
 
     failed = False
     exclude_patterns = []
@@ -296,11 +295,11 @@ if __name__ == '__main__':
 
     kwargs = {
         'store_path': parsed.store_path,
+        'outfile': parsed.outfile,
         'grouping_base': grouping_base,
         'gpgbinary': parsed.gpgbinary,
         'use_agent': parsed.use_agent,
         'encodings': encodings,
-        'outfile': parsed.outfile,
         'exclude': exclude_patterns,
         'get_fields': get_fields,
         'get_lines': get_lines
