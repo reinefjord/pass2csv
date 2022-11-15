@@ -8,7 +8,7 @@ import sys
 
 import gnupg
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 
 def set_meta(entry, path, grouping_base):
@@ -77,7 +77,7 @@ def write(file, entries, get_fields, get_lines):
     field_names = get_field_names | get_line_names
     header = ["Group(/)", "Title", "Password", *field_names, "Notes"]
     csvw = csv.writer(file)
-    logging.info("Writing data to %s", file.name)
+    logging.info("\nWriting data to %s\n", file.name)
     csvw.writerow(header)
     for entry in entries:
         fields = [entry['fields'].get(name) for name in field_names]
@@ -128,8 +128,7 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
                 logging.warning("Decoded {} with encoding {}".format(file, encoding))
             break
         else:
-            err = "Could not decode {}, see warnings for more info.".format(file)
-            logging.error(err)
+            err = "Could not decode {}, see messages above for more info.".format(file)
             failures.append(err)
             continue
         entry = {}
@@ -137,7 +136,7 @@ def main(store_path, grouping_base, outfile, gpgbinary, use_agent, encodings,
         set_data(entry, decrypted_data, exclude, get_fields, get_lines)
         entries.append(entry)
     if failures:
-        logging.warning("Got errors while processing files:")
+        logging.warning("\nGot errors while processing files:")
         for err in failures:
             logging.warning(err)
     write(outfile, entries, get_fields, get_lines)
