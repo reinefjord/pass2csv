@@ -12,13 +12,14 @@ You can install it directly from PyPI with pip:
 ```
 $ pass2csv --help
 usage: pass2csv [-h] [-b path] [-g executable] [-a] [--encodings encodings]
-                [-o file] [-e pattern] [-f name pattern] [-l name pattern]
-                store_path
+                [-e pattern] [-f name pattern] [-l name pattern]
+                STOREPATH OUTFILE
 
 positional arguments:
-  store_path            path to the password-store to export
+  STOREPATH             path to the password-store to export
+  OUTFILE               file to write exported data to, use - for stdout
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -b path, --base path  path to use as base for grouping passwords
   -g executable, --gpg executable
@@ -27,8 +28,6 @@ optional arguments:
   --encodings encodings
                         comma-separated text encodings to try, in order, when
                         decoding gpg output (default 'utf-8')
-  -o file, --outfile file
-                        file to write exported data to (default stdin)
   -e pattern, --exclude pattern
                         regexp for lines which should not be exported, can be
                         specified multiple times
