@@ -1,8 +1,22 @@
 # pass2csv
 
-Source is available [at GitHub](https://github.com/reinefjord/pass2csv).
+pass2csv is a tool that exports a
+[pass(1)](https://www.passwordstore.org/) password store to a CSV. It
+can export whole stores, subdirectories of a store, and single password
+files. It can use regexp patterns to find and group data after the first
+line of each password into additional CSV columns, as well as exclude
+data from the export.
 
-You can install it directly from PyPI with pip:
+Source is available [at GitHub](https://github.com/reinefjord/pass2csv),
+and the package is published to the
+[Python Package Index](https://pypi.org/project/pass2csv/).
+
+You can install the package with [pipx](https://pypa.github.io/pipx/)
+(recommended):
+
+    pipx install pass2csv
+
+or with pip:
 
     python3 -m pip install --user pass2csv
 
