@@ -70,33 +70,26 @@ specifying `--get-field` or`--get-line` multiple times with the same
 name. Regexp patterns are case-insensitive.
 
 
-### Examples
-
-* Password entry (`~/.password-store/sites/example/login.gpg`):
+### Example usage
 
 ```
+$ gpg -d ~/.password-store/sites/example/login.gpg
 password123
 ---
 username: user_name
 email user@example.com
 url:example.com
 Some note
-```
 
-* Command
+$ pass2csv ~/.password-store - \
+    --exclude '^---$' \
+    --get-field Username '(username|email):?' \
+    --get-field URL 'url:?'
 
-```
-pass2csv ~/.password-store \
-  --exclude '^---$' \
-  --get-field Username '(username|email):?' \
-  --get-field URL 'url:?'
-```
+"Group(/)","Title","Password","URL","Username","Notes"
+"sites/example","login","password123","example.com","user_name","email user@example.com
 
-* Output
-
-```
-Group(/),Title,Password,URL,Username,Notes
-sites/example,login,password123,example.com,user_name,"email user@example.com\nSome note"
+Some note"
 ```
 
 
