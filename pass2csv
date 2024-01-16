@@ -76,7 +76,7 @@ def write(file, entries, get_fields, get_lines):
     get_line_names = set(x[0] for x in get_lines)
     field_names = get_field_names | get_line_names
     header = ["Group(/)", "Title", "Password", *field_names, "Notes"]
-    csvw = csv.writer(file)
+    csvw = csv.writer(file, dialect='unix')
     logging.info("\nWriting data to %s\n", file.name)
     csvw.writerow(header)
     for entry in entries:
