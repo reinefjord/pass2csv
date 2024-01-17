@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import csv
-import logging
 import pathlib
 import re
 import sys
@@ -10,7 +9,9 @@ import gnupg
 
 __version__ = '1.0.0'
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+def stderr(s, *args, **kwargs):
+    print(s, *args, file=sys.stderr, **kwargs)
 
 
 def set_meta(entry, path, grouping_base):
@@ -79,7 +80,7 @@ def write(file, entries, get_fields, get_lines):
     field_names = get_field_names | get_line_names
     header = ["Group(/)", "Title", "Password", *field_names, "Notes"]
     csvw = csv.writer(file, dialect='unix')
-    logging.info("\nWriting data to %s\n", file.name)
+    stderr(f"\nWriting data to {file.name}\n")
     csvw.writerow(header)
     for entry in entries:
         fields = [entry['fields'].get(name) for name in field_names]
@@ -103,16 +104,15 @@ def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
         if path.is_file():
             files = [path]
         else:
-            err = "No such file or directory: {}".format(path)
-            logging.error(err)
+            stderr(f"No such file or directory: {path}")
             sys.exit(1)
     for file in files:
-        logging.info("Processing %s", file)
+        stderr(f"Processing {file}")
         with open(file, 'rb') as fp:
             decrypted = gpg.decrypt_file(fp)
         if not decrypted.ok:
-            err = "Could not decrypt {}: {}".format(file, decrypted.status)
-            logging.error(err)
+            err = f"Could not decrypt {file}: {decrypted.status}"
+            stderr(err)
             failures.append(err)
             continue
         for i, encoding in enumerate(encodings):
@@ -120,14 +120,11 @@ def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
                 # decrypted.data is bytes
                 decrypted_data = decrypted.data.decode(encoding)
             except Exception as e:
-                logging.warning(
-                    "Could not decode {} with encoding {}: {}"
-                    .format(file, encoding, e)
-                )
+                stderr(f"Could not decode {file} with encoding {encoding}: {e}")
                 continue
             if i > 0:
                 # don't log if the first encoding worked
-                logging.warning("Decoded {} with encoding {}".format(file, encoding))
+                stderr(f"Decoded {file} with encoding {encoding}")
             break
         else:
             err = "Could not decode {}, see messages above for more info.".format(file)
@@ -138,9 +135,12 @@ def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
         set_data(entry, decrypted_data, exclude, get_fields, get_lines)
         entries.append(entry)
     if failures:
-        logging.warning("\nGot errors while processing files:")
+        stderr("\nGot errors while processing files:")
         for err in failures:
-            logging.warning(err)
+            stderr(err)
+    if not entries:
+        stderr("\nNothing to write.")
+        sys.exit(1)
     write(outfile, entries, get_fields, get_lines)
 
 
@@ -253,10 +253,8 @@ def compile_regexp(pattern):
     try:
         regexp = re.compile(pattern, re.I)
     except re.error as e:
-        logging.error(
-            "Could not compile pattern '%s', %s at position %s",
-            pattern.replace("'", "\\'"), e.msg, e.pos
-        )
+        escaped = pattern.replace("'", "\\'")
+        stderr(f"Could not compile pattern '{escaped}', {e.msg} at position {e.pos}")
         return None
     return regexp
 
@@ -296,9 +294,7 @@ if __name__ == '__main__':
 
     encodings = [e for e in parsed.encodings.split(',') if e]
     if not encodings:
-        logging.error(
-            "Did not understand '--encodings {}'".format(parsed.encoding)
-        )
+        stderr(f"Did not understand '--encodings {parsed.encoding}'")
         sys.exit(1)
 
     kwargs = {
