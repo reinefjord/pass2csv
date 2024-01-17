@@ -173,7 +173,7 @@ def parse_args(args=None):
         metavar='executable',
         type=str,
         default="gpg",
-        help="path to the gpg binary you wish to use (default 'gpg')",
+        help="path to the gpg binary you wish to use (default: '%(default)s')",
         dest='gpgbinary'
     )
 
@@ -192,7 +192,7 @@ def parse_args(args=None):
         default="utf-8",
         help=(
             "comma-separated text encodings to try, in order, when decoding"
-            " gpg output (default 'utf-8')"
+            " gpg output (default: '%(default)s')"
         ),
         dest='encodings'
     )
