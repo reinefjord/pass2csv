@@ -161,9 +161,9 @@ environment.
 
 ### Packaging
 
-See [https://packaging.python.org/tutorials/packaging-projects/](https://packaging.python.org/tutorials/packaging-projects/) for detailed info.
+See [Python Packaging User Guide](https://packaging.python.org/tutorials/packaging-projects/) for detailed info.
 
 0. `pip-sync requirements.txt dev-requirements.txt`
-1. Increment `version` in `setup.cfg`.
-2. `python3 -m build`
-4. `python3 -m twine upload dist/*version*`
+1. Increment `__version__` in `pass2csv.py`.
+2. `rm -rf dist/* && python3 -m build`
+4. `python3 -m twine upload dist/*`
