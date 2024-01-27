@@ -7,7 +7,7 @@ import sys
 
 import gnupg
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 
 def stderr(s, *args, **kwargs):
@@ -259,7 +259,7 @@ def compile_regexp(pattern):
     return regexp
 
 
-if __name__ == '__main__':
+def cli():
     parsed = parse_args()
 
     failed = False
@@ -310,3 +310,6 @@ if __name__ == '__main__':
     }
 
     main(**kwargs)
+
+if __name__ == '__main__':
+    cli()

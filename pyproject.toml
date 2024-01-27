@@ -1,3 +1,35 @@
 [build-system]
-requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools"]
+
+[project]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Topic :: Utilities"
+]
+dependencies = ["python-gnupg"]
+description = 'Export pass(1), "the standard unix password manager", to CSV'
+dynamic = ["version"]
+keywords = ["csv", "export", "pass2csv"]
+maintainers = [
+    {name = "Rupus Reinefjord", email = "rupus@reinefjord.net"}
+]
+name = "pass2csv"
+readme = "README.md"
+requires-python = ">=3.6"
+
+[project.scripts]
+pass2csv = "pass2csv:cli"
+
+[project.urls]
+Changelog = "https://github.com/reinefjord/pass2csv/releases"
+Homepage = "https://github.com/reinefjord/pass2csv"
+
+[tool.setuptools.dynamic]
+version = {attr = "pass2csv.__version__"}
