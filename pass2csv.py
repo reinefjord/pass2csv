@@ -74,11 +74,13 @@ def set_data(entry, data, exclude, get_fields, get_lines):
     entry['notes'] = '\n'.join(final_tail).strip()
 
 
-def write(file, entries, get_fields, get_lines):
+def write(file, entries, get_fields, get_lines, static):
     get_field_names = set(x[0] for x in get_fields)
     get_line_names = set(x[0] for x in get_lines)
     field_names = get_field_names | get_line_names
-    header = ["Group(/)", "Title", "Password", *field_names, "Notes"]
+    static_names = [x[0] for x in static]
+    static_values = [x[1] for x in static]
+    header = ["Group(/)", "Title", "Password", *field_names, *static_names, "Notes"]
     csvw = csv.writer(file, dialect='unix')
     stderr(f"\nWriting data to {file.name}\n")
     csvw.writerow(header)
@@ -87,13 +89,14 @@ def write(file, entries, get_fields, get_lines):
         columns = [
             entry['group'], entry['title'], entry['password'],
             *fields,
+            *static_values,
             entry['notes']
         ]
         csvw.writerow(columns)
 
 
 def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
-         exclude, get_fields, get_lines):
+         exclude, get_fields, get_lines, static):
     entries = []
     failures = []
     path = pathlib.Path(store_path)
@@ -141,7 +144,7 @@ def main(store_path, outfile, grouping_base, gpgbinary, use_agent, encodings,
     if not entries:
         stderr("\nNothing to write.")
         sys.exit(1)
-    write(outfile, entries, get_fields, get_lines)
+    write(outfile, entries, get_fields, get_lines, static)
 
 
 def parse_args(args=None):
@@ -241,6 +244,17 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        '-s', '--static',
+        metavar=('name', 'value'),
+        action='append',
+        nargs=2,
+        type=str,
+        default=[],
+        help=("a name and a value which will be the same for all passwords"),
+        dest='static'
+    )
+
+    parser.add_argument(
         '--version',
         action='version',
         version='%(prog)s ' + __version__
@@ -306,7 +320,8 @@ def cli():
         'encodings': encodings,
         'exclude': exclude_patterns,
         'get_fields': get_fields,
-        'get_lines': get_lines
+        'get_lines': get_lines,
+        'static': parsed.static
     }
 
     main(**kwargs)
