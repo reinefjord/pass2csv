@@ -1,4 +1,8 @@
-# pass2csv
+# pass2csv - SOURCE HAS MOVED
+
+**The source for this project has moved to** [Codeberg](https://codeberg.org/svartstare/pass2csv)! Please report issues and make pull request over there.
+
+---
 
 pass2csv is a tool that exports a
 [pass(1)](https://www.passwordstore.org/) password store to a CSV. It
